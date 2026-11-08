@@ -1,0 +1,17 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const src=fs.readFileSync('src/app.js','utf8');
+const math=src.slice(src.indexOf('const dist='),src.indexOf('const svgNS='));
+const geom=src.slice(src.indexOf('function bikeGeometry('),src.indexOf('function dimension('));
+const {cycleAssessment,ankleAt}=new Function('rad',math+geom+';return {cycleAssessment,ankleAt}')(d=>d*Math.PI/180);
+const g={reach:513,stack:644,seat:500,chain:437,wheelbase:1265,head:140,top:666,ha:66,drop:35,bbheight:339,actualsa:72,rake:41};
+const b={thigh:49,shin:46,torso:62,upper:30,fore:30,hand:9,foot:17,shoulders:50};
+const s={saddle:730,offset:0,gripx:25,gripy:70,crank:175,lean:45,barwidth:760,gripinset:60,pose:'seated',footpitch:0,anklerise:65,refmin:25,refmax:30};
+const a=cycleAssessment(g,b,s);assert.equal(a.samples.length,360);assert.equal(a.fails,0);assert.ok(a.gap>20);
+let green;for(let saddle=730;saddle<=950;saddle++){const v=cycleAssessment(g,b,{...s,saddle});if(v.gap===0){green=v;break}}assert.ok(green,'reachable saddle position in reference');assert.equal(green.color,'hsl(120, 68%, 38%)');
+assert.ok(cycleAssessment(g,b,{...s,saddle:950}).fails>0);
+assert.equal(cycleAssessment(g,b,{...s,pose:'manual'}),null);
+assert.equal(cycleAssessment(g,null,s),null);
+assert.match(cycleAssessment(g,b,{...s,refmin:40,refmax:20}).message,/minimum/);
+const p={x:15,y:90},q=ankleAt(p,b,{...s,footpitch:20});assert.ok(Math.abs(Math.hypot(q.x-p.x,q.y-p.y)-Math.hypot(170,65))<1e-8);
+assert.notEqual(cycleAssessment(g,b,{...s,footpitch:20}).extended.flex,a.extended.flex);
+console.log('PASS: 360-phase cycle, green reference, red deviation, impossible geometry, standing disabled, inverted range, rotated foot length.');
